@@ -1,5 +1,16 @@
 import { prisma } from "../../lib/prisma";
-import { Veiculo } from "../schemas/veiculos.schema";
+import {createVeiculoInput, Veiculo} from "../schemas/veiculos.schema";
+import {FastifyReply, FastifyRequest} from "fastify";
+import {createClienteSchema} from "@/src/server/schemas/clientes.schema";
+
+export async function cadastrarVeiculoService(
+    request: FastifyRequest<{ Body: createVeiculoInput }>,
+    reply: FastifyReply
+) {
+    try {
+        const data = createClienteSchema.parse(request.body);
+    }
+}
 
 export async function listarVeiculosService(): Promise<Veiculo[]> {
     const veiculosDb = await prisma.tb_veiculo.findMany({
