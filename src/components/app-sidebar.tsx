@@ -23,7 +23,7 @@ import {
 import Link from "next/link"
 import React, { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
-import { ChevronRight, Truck, PlusCircle, PackageCheck, Calendar, Building, UserPlus } from "lucide-react"
+import { ChevronRight, Truck, PlusCircle, PackageCheck, Calendar, Building, UserPlus, Layers, LayersPlusIcon } from "lucide-react"
 
 const entregaItems = [
   { title: "Nova Entrega", url: "/operador/entrega/nova-entrega", icon: PlusCircle },
@@ -32,13 +32,30 @@ const entregaItems = [
   { title: "Entregas Agendadas", url: "/operador/entrega/agendamentos", icon: Calendar },
 ]
 
+const cadastroItems = [
+  { title: "Clientes", url: "/operador/cliente", icon: UserPlus },
+  { title: "Depósitos", url: "/deposito", icon: Building },
+  { title: "Empresas", url: "/operador/empresa", icon: Building },
+  { title: "Veículos", url: "/operador/veiculo", icon: Truck },
+]
+
 export function AppSidebar() {
   const pathname = usePathname()
-  const [isOpen, setIsOpen] = useState(pathname.startsWith("/operador"))
+
+  // states independentes: um para o grupo Entregas, outro para Cadastros
+  const [isEntregasOpen, setIsEntregasOpen] = useState(
+    pathname.startsWith("/operador/entrega")
+  )
+  const [isCadastrosOpen, setIsCadastrosOpen] = useState(
+    cadastroItems.some((item) => pathname.startsWith(item.url))
+  )
 
   useEffect(() => {
-    if (pathname.startsWith("/operador")) {
-      setIsOpen(true)
+    if (pathname.startsWith("/operador/entrega")) {
+      setIsEntregasOpen(true)
+    }
+    if (cadastroItems.some((item) => pathname.startsWith(item.url))) {
+      setIsCadastrosOpen(true)
     }
   }, [pathname])
 
@@ -48,10 +65,15 @@ export function AppSidebar() {
         <div className="p-4 text-xl font-bold">Rotas Otimizadas</div>
       </SidebarHeader>
       <SidebarContent>
+        {/* grupo de Entregas */}
         <SidebarGroup>
           <SidebarGroupLabel>Menu Entregas</SidebarGroupLabel>
           <SidebarMenu>
-            <Collapsible open={isOpen} onOpenChange={setIsOpen} className="group/collapsible">
+            <Collapsible
+              open={isEntregasOpen}
+              onOpenChange={setIsEntregasOpen}
+              className="group/collapsible"
+            >
               <SidebarMenuItem>
                 <SidebarMenuButton
                   isActive={pathname === "/operador"}
@@ -88,27 +110,44 @@ export function AppSidebar() {
             </Collapsible>
           </SidebarMenu>
         </SidebarGroup>
+
+        {/* grupo de Cadastros */}
         <SidebarGroup>
-          <SidebarGroupLabel>Configurações</SidebarGroupLabel>
+          <SidebarGroupLabel>Cadastros</SidebarGroupLabel>
           <SidebarMenu>
-            <SidebarMenuItem>
+            <Collapsible
+              open={isCadastrosOpen}
+              onOpenChange={setIsCadastrosOpen}
+              className="group/collapsible"
+            >
+              <SidebarMenuItem>
                 <SidebarMenuButton
-                  isActive={pathname.startsWith("/cliente")}
-                  render={<Link href="/operador/cliente" />}
+                  render={
+                    <CollapsibleTrigger />
+                  }
                 >
-                  <UserPlus />
-                  <span>Clientes</span>
+                  <LayersPlusIcon />
+                  <span>Cadastros</span>
+                  <ChevronRight className="ml-auto data-[state=open]:rotate-90 transition-transform" />
                 </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={pathname.startsWith("/deposito")}
-                  render={<Link href="/deposito" />}
-                >
-                  <Building />
-                  <span>Depósitos</span>
-                </SidebarMenuButton>
-            </SidebarMenuItem>
+
+                <CollapsibleContent>
+                  <SidebarMenuSub>
+                    {cadastroItems.map((item) => (
+                      <SidebarMenuSubItem key={item.url}>
+                        <SidebarMenuSubButton
+                          isActive={pathname.startsWith(item.url)}
+                          render={<Link href={item.url} />}
+                        >
+                          <item.icon />
+                          <span>{item.title}</span>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                    ))}
+                  </SidebarMenuSub>
+                </CollapsibleContent>
+              </SidebarMenuItem>
+            </Collapsible>
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
