@@ -6,6 +6,7 @@ import { usuariosRoutes } from "./routes/usuarios.routes";
 import { entregasRoutes } from "./routes/entregas.routes";
 import { rotasRoutes } from "./routes/rotas.route";
 import { veiculosRoutes } from "./routes/veiculos.routes";
+import { depositosRoutes } from "./routes/depositos.routes";
 
 const fastify = Fastify({
     logger: true
@@ -31,11 +32,12 @@ fastify.register(usuariosRoutes);
 fastify.register(entregasRoutes);
 fastify.register(rotasRoutes);
 fastify.register(veiculosRoutes);
+fastify.register(depositosRoutes);
 
 // Run the server!
 ; (async () => {
     try {
-        await fastify.listen({ port: 3001 })
+        await fastify.listen({ port: 3001, host: '0.0.0.0' })
     } catch (err) {
         fastify.log.error(err)
         process.exit(1)

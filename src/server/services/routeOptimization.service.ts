@@ -1,4 +1,7 @@
-// src/server/services/routeOptimization.service.ts
+import { RouteOptimizationClient } from '@googlemaps/routeoptimization';
+
+// A inicialização padrão pega as credenciais de GOOGLE_APPLICATION_CREDENTIALS
+const routeOptimizationClient = new RouteOptimizationClient();
 
 interface LatLng {
     latitude: number;
@@ -26,6 +29,7 @@ export interface OptimizationResult {
         }>;
         totalDistanceMeters: number;
         totalDurationSeconds: number;
+        mapsUrl?: string;
     }>;
 }
 
@@ -33,22 +37,17 @@ export async function optimizeRoutes(
     shipments: DeliveryShipment[],
     vehicles: VehicleCapacity[]
 ): Promise<OptimizationResult> {
-    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-    if (!apiKey) {
-        throw new Error("GOOGLE_MAPS_API_KEY não configurada no .env");
+    const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
+    if (!projectId) {
+        throw new Error("GOOGLE_CLOUD_PROJECT_ID não configurado no .env");
     }
 
-    // A API de Route Optimization (Fleet Routing) espera um Project ID na URL. 
-    // Muitas vezes podemos omitir usando "-" se usarmos uma API Key com as devidas permissões, 
-    // mas se der erro "Project Not Found", precisamos definir GOOGLE_CLOUD_PROJECT_ID no .env.
-    const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID || "-";
-    const url = `https://routeoptimization.googleapis.com/v1/projects/${projectId}:optimizeTours?key=${apiKey}`;
-
     // Montar payload do Fleet Routing API
-    const googleShipments = shipments.map((shipment, index) => ({
+    const googleShipments = shipments.map((shipment) => ({
         deliveries: [{
             arrivalLocation: {
-                latLng: shipment.location
+                latitude: shipment.location.latitude,
+                longitude: shipment.location.longitude
             }
         }],
         loadDemands: {
@@ -61,10 +60,12 @@ export async function optimizeRoutes(
 
     const googleVehicles = vehicles.map(vehicle => ({
         startLocation: {
-            latLng: vehicle.startLocation
+            latitude: vehicle.startLocation.latitude,
+            longitude: vehicle.startLocation.longitude
         },
         endLocation: {
-            latLng: vehicle.startLocation // Assumimos que retorna ao depósito
+            latitude: vehicle.startLocation.latitude, // Assumimos que retorna ao depósito
+            longitude: vehicle.startLocation.longitude
         },
         loadLimits: {
             "weight": {
@@ -74,28 +75,17 @@ export async function optimizeRoutes(
         label: vehicle.id
     }));
 
-    const payload = {
+    const request = {
+        parent: `projects/${projectId}`,
         model: {
             shipments: googleShipments,
-            vehicles: googleVehicles,
-            globalStartTime: new Date().toISOString()
-        }
+            vehicles: googleVehicles
+        },
+        solvingMode: 'DEFAULT_SOLVE',
     };
 
-    const response = await fetch(url, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-        const err = await response.text();
-        throw new Error(`Google Route Optimization API error (${response.status}): ${err}`);
-    }
-
-    const data = await response.json();
+    const response = await routeOptimizationClient.optimizeTours(request as any);
+    const data = response[0];
     
     // Parse the response back into our domain format
     const result: OptimizationResult = { routes: [] };
@@ -105,21 +95,25 @@ export async function optimizeRoutes(
     }
 
     for (const route of data.routes) {
-        // vehicleIndex diz qual veiculo fez a rota (baseado na ordem enviada)
-        const vIndex = route.vehicleIndex || 0;
-        const vehicleId = vehicles[vIndex].id;
+        // Use vehicleLabel, que contém o ID do veículo
+        const vehicleId = route.vehicleLabel || vehicles[0].id;
+        
+        // Localizar o veículo pelo ID
+        const vehicle = vehicles.find(v => v.id === vehicleId) || vehicles[0];
         
         const stops = [];
         let sequence = 1;
         
         if (route.visits) {
             for (const visit of route.visits) {
-                const shipmentIndex = visit.shipmentIndex;
-                const deliveryId = shipments[shipmentIndex].id;
-                stops.push({
-                    deliveryId,
-                    sequence: sequence++
-                });
+                // Use shipmentLabel que contém o ID da entrega
+                const deliveryId = visit.shipmentLabel;
+                if (deliveryId) {
+                    stops.push({
+                        deliveryId,
+                        sequence: sequence++
+                    });
+                }
             }
         }
 
@@ -127,16 +121,46 @@ export async function optimizeRoutes(
         let durationSeconds = 0;
         
         if (route.metrics) {
-            distanceMeters = route.metrics.travelDistanceMeters || 0;
-            const dur = route.metrics.travelDuration || "0s";
-            durationSeconds = parseInt(dur.replace("s", ""), 10) || 0;
+            distanceMeters = Number(route.metrics.travelDistanceMeters) || 0;
+            // No gRPC, duration vem como { seconds: string|number|Long, nanos: number }
+            const dur = route.metrics.travelDuration;
+            if (dur && dur.seconds != null) {
+                durationSeconds = Number(dur.seconds);
+            }
+        }
+
+        let mapsUrl: string | undefined = undefined;
+        if (route.visits && route.visits.length > 0) {
+            const startLat = vehicle.startLocation.latitude;
+            const startLng = vehicle.startLocation.longitude;
+            
+            const originStr = `${startLat},${startLng}`;
+            
+            const visitCoords = route.visits
+                .map((visit: any) => shipments.find(s => s.id === visit.shipmentLabel))
+                .filter((s: any) => s !== undefined)
+                .map((s: any) => `${s.location.latitude},${s.location.longitude}`);
+
+            // O destino final deve ser a última entrega, e o resto fica nos waypoints
+            const destinationStr = visitCoords[visitCoords.length - 1];
+            const waypointsList = visitCoords.slice(0, -1);
+            const waypointsStr = waypointsList.join('%7C'); // %7C é o pipe (|) já encoded
+
+            let url = `https://www.google.com/maps/dir/?api=1&origin=${originStr}&destination=${destinationStr}`;
+            if (waypointsStr) {
+                url += `&waypoints=${waypointsStr}`;
+            }
+            url += `&travelmode=driving&dir_action=navigate`;
+
+            mapsUrl = url;
         }
 
         result.routes.push({
             vehicleId,
             stops,
             totalDistanceMeters: distanceMeters,
-            totalDurationSeconds: durationSeconds
+            totalDurationSeconds: durationSeconds,
+            mapsUrl
         });
     }
 

@@ -23,6 +23,15 @@ export async function getClientesAction(): Promise<any[]> {
     return res.json();
 }
 
+export async function getDepositosAction(): Promise<any[]> {
+    const res = await fetch(`${BACKEND_URL}/depositos`, { cache: 'no-store' });
+    if (!res.ok) {
+        console.error("Erro ao buscar depositos", await res.text());
+        return [];
+    }
+    return res.json();
+}
+
 export async function searchEnderecoAction(address: string): Promise<any[]> {
     const res = await fetch(`${BACKEND_URL}/geocoding/search?address=${encodeURIComponent(address)}`, { cache: 'no-store' });
     if (!res.ok) {
@@ -32,11 +41,11 @@ export async function searchEnderecoAction(address: string): Promise<any[]> {
     return res.json();
 }
 
-export async function salvarLoteAction(entregas: EntregaItem[]): Promise<boolean> {
+export async function salvarLoteAction(entregas: EntregaItem[], veiculosIds: string[], depositoId: string): Promise<boolean> {
     const res = await fetch(`${BACKEND_URL}/entregas/lote`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ entregas }),
+        body: JSON.stringify({ entregas, veiculosIds, depositoId }),
     });
 
     if (!res.ok) {

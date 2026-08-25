@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { ZodTypeProvider } from "@fastify/type-provider-zod";
 import { listarClientesController } from "../controller/usuarios.controller";
+import { criarClienteController } from "../controller/clientes.controller";
 import { clienteResponseSchema } from "../schemas/usuarios.schema";
 
 export async function usuariosRoutes(fastify: FastifyInstance) {
@@ -15,4 +16,6 @@ export async function usuariosRoutes(fastify: FastifyInstance) {
         },
         listarClientesController
     );
+
+    fastify.post('/clientes', criarClienteController);
 }

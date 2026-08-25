@@ -5,6 +5,9 @@ export const clienteResponseSchema = z.array(
         usr_id: z.string().uuid(),
         usr_nome: z.string(),
         usr_email: z.string().email(),
+        endereco_digitado: z.string().nullable().optional(),
+        lat: z.number().nullable().optional(),
+        lng: z.number().nullable().optional(),
     })
 );
 

@@ -102,7 +102,8 @@ export async function optimizeRouteController(
                         rota_empresa_id: empresaId,
                         rota_status: 'PLANEJADA',
                         rota_distancia_total: route.totalDistanceMeters,
-                        rota_duracao_total: route.totalDurationSeconds
+                        rota_duracao_total: route.totalDurationSeconds,
+                        rota_maps_url: route.mapsUrl || null
                     }
                 });
 

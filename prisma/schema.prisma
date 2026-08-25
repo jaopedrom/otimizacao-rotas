@@ -66,6 +66,7 @@ model tb_endereco {
   tb_endereco_postal                                   tb_endereco_postal @relation(fields: [end_endp_id], references: [endp_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_endereco_endp")
   tb_entrega_tb_entrega_ent_end_idTotb_endereco        tb_entrega[]       @relation("tb_entrega_ent_end_idTotb_endereco")
   tb_entrega_tb_entrega_ent_pickup_end_idTotb_endereco tb_entrega[]       @relation("tb_entrega_ent_pickup_end_idTotb_endereco")
+  tb_usuario_tb_usuario_usr_end_idTotb_endereco        tb_usuario[]       @relation("tb_usuario_usr_end_idTotb_endereco")
 
   @@index([end_endp_id], map: "idx_endereco_endp")
 }
@@ -175,6 +176,7 @@ model tb_rota {
   rota_status          tipo_rota_status @default(PLANEJADA)
   rota_distancia_total Decimal?         @db.Decimal(10, 2)
   rota_duracao_total   Int?
+  rota_maps_url        String?          @db.Text
   dt_criacao           DateTime         @default(now()) @db.Timestamp(6)
   tb_parada            tb_parada[]
   tb_usuario           tb_usuario?      @relation(fields: [rota_criado_por_id], references: [usr_id], onUpdate: NoAction, map: "fk_rota_criado_por")
@@ -199,16 +201,19 @@ model tb_usuario {
   usr_password_hash                                   String       @db.VarChar(255)
   usr_cargo                                           tipo_usr
   usr_tel_id                                          String?      @db.Uuid
+  usr_end_id                                          String?      @db.Uuid
   dt_criacao                                          DateTime     @default(now()) @db.Timestamp(6)
   tb_entrega_tb_entrega_ent_criado_por_idTotb_usuario tb_entrega[] @relation("tb_entrega_ent_criado_por_idTotb_usuario")
   tb_entrega_tb_entrega_ent_user_idTotb_usuario       tb_entrega[] @relation("tb_entrega_ent_user_idTotb_usuario")
   tb_rota                                             tb_rota[]
   tb_empresa                                          tb_empresa   @relation(fields: [usr_emp_id], references: [empresa_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_usr_empresa")
   tb_telefone                                         tb_telefone? @relation(fields: [usr_tel_id], references: [tel_id], onUpdate: NoAction, map: "fk_usr_tel")
+  tb_endereco_tb_usuario_usr_end_idTotb_endereco      tb_endereco? @relation("tb_usuario_usr_end_idTotb_endereco", fields: [usr_end_id], references: [end_id], onUpdate: NoAction, map: "fk_usr_end")
   tb_veiculo                                          tb_veiculo[]
 
   @@index([usr_emp_id], map: "idx_usuario_empresa")
   @@index([usr_tel_id], map: "idx_usuario_tel")
+  @@index([usr_end_id], map: "idx_usuario_end")
 }
 
 model tb_veiculo {

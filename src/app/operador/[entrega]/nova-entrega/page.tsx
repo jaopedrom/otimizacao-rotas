@@ -12,11 +12,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/src/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/src/components/ui/command";
 import { RadioButton } from "@/src/components/radio-button";
-import { Plus, Trash2, Check, ChevronsUpDown, MapPin, Loader2, Save } from "lucide-react";
+import { Progress } from "@/src/components/ui/progress";
+import { Alert, AlertDescription, AlertTitle } from "@/src/components/ui/alert";
+import { Plus, Trash2, Check, ChevronsUpDown, MapPin, Loader2, Save, AlertCircle } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 import { useDebounce } from "use-debounce";
 
-import { getVeiculosAction, getClientesAction, searchEnderecoAction, salvarLoteAction } from "./actions";
+import { getVeiculosAction, getClientesAction, salvarLoteAction, getDepositosAction } from "./actions";
 import { Cliente } from "@/src/server/schemas/usuarios.schema";
 import { Veiculo } from "@/src/server/schemas/veiculos.schema";
 import { EntregaItem, ProdutoItem, novaEntregaFormSchema as formSchema, NovaEntregaFormValues as FormValues } from "@/src/server/schemas/entregas.schema";
@@ -29,13 +31,13 @@ export default function NovaEntrega() {
 
     const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
     const [openVeiculo, setOpenVeiculo] = useState(false);
+    const [openVeiculosMulti, setOpenVeiculosMulti] = useState(false);
     const [loadingVeiculos, setLoadingVeiculos] = useState(false);
 
-    const [enderecoQuery, setEnderecoQuery] = useState("");
-    const [debouncedEnderecoQuery] = useDebounce(enderecoQuery, 500);
-    const [enderecoResultados, setEnderecoResultados] = useState<any[]>([]);
-    const [openEndereco, setOpenEndereco] = useState(false);
-    const [loadingEndereco, setLoadingEndereco] = useState(false);
+    const [depositos, setDepositos] = useState<any[]>([]);
+    const [openDeposito, setOpenDeposito] = useState(false);
+    const [depositoIdSelecionado, setDepositoIdSelecionado] = useState<string>("");
+
     const [salvando, setSalvando] = useState(false);
 
     const { register, handleSubmit, control, setValue, watch, formState: { errors }, reset } = useForm<FormValues>({
@@ -43,8 +45,8 @@ export default function NovaEntrega() {
         defaultValues: {
             tipo_entrega: "multi-entrega",
             veiculoId: "",
+            veiculosIds: [],
             clienteId: "",
-            enderecoDigitado: "",
             produtos: [{ quantidade: 1, peso_unitario: 50, descricao: "" }]
         },
     });
@@ -55,9 +57,10 @@ export default function NovaEntrega() {
     });
 
     const watchVeiculoId = watch("veiculoId");
+    const watchVeiculosIds = watch("veiculosIds") || [];
     const watchClienteId = watch("clienteId");
-    const watchEndereco = watch("enderecoDigitado");
     const watchTipoEntrega = watch("tipo_entrega");
+    const watchProdutos = watch("produtos");
 
     useEffect(() => {
         setLoadingVeiculos(true);
@@ -75,52 +78,52 @@ export default function NovaEntrega() {
             })
             .catch(err => console.error("Erro ao carregar clientes", err))
             .finally(() => setLoadingClientes(false));
+            
+        getDepositosAction()
+            .then(data => {
+                if (Array.isArray(data)) setDepositos(data);
+            })
+            .catch(err => console.error("Erro ao carregar depositos", err));
     }, []);
-
-    useEffect(() => {
-        // Buscar endereços
-        if (debouncedEnderecoQuery && debouncedEnderecoQuery.length > 3) {
-            setLoadingEndereco(true);
-            searchEnderecoAction(debouncedEnderecoQuery)
-                .then(data => {
-                    setEnderecoResultados(data);
-                    setOpenEndereco(true);
-                })
-                .catch(err => console.error("Erro na busca de endereço", err))
-                .finally(() => setLoadingEndereco(false));
-        } else {
-            setEnderecoResultados([]);
-            setOpenEndereco(false);
-        }
-    }, [debouncedEnderecoQuery]);
 
     function onSubmit(data: FormValues) {
         const clienteSelecionado = clientes.find(c => c.usr_id === data.clienteId);
-        const veiculoSelecionado = veiculos.find(v => v.veiculo_id === data.veiculoId);
+        
+        let veiculoNome;
+        if (data.tipo_entrega === "unica-entrega") {
+            veiculoNome = veiculos.find(v => v.veiculo_id === data.veiculoId)?.veiculo_nome;
+        } else {
+            veiculoNome = "Múltiplos Veículos"; // Simplificacao para display
+        }
+
+        if (!clienteSelecionado || !clienteSelecionado.lat || !clienteSelecionado.lng) {
+            alert("O cliente selecionado não possui um endereço válido ou geocodificado no cadastro.");
+            return;
+        }
 
         const novaEntrega: EntregaItem = {
             id: crypto.randomUUID(),
-            veiculoId: data.veiculoId,
-            veiculoNome: veiculoSelecionado?.veiculo_nome,
+            veiculoId: data.tipo_entrega === "unica-entrega" ? data.veiculoId : undefined,
+            veiculosIds: data.tipo_entrega === "multi-entrega" ? data.veiculosIds : undefined,
+            veiculoNome: veiculoNome,
             clienteId: data.clienteId,
-            clienteNome: clienteSelecionado?.usr_nome || "Cliente Desconhecido",
-            enderecoDigitado: data.enderecoDigitado,
-            lat: data.lat,
-            lng: data.lng,
+            clienteNome: clienteSelecionado.usr_nome,
+            enderecoDigitado: clienteSelecionado.endereco_digitado || "Endereço Desconhecido",
+            lat: clienteSelecionado.lat,
+            lng: clienteSelecionado.lng,
             produtos: data.produtos,
         };
 
         setEntregas([...entregas, novaEntrega]);
 
-        // Limpar form para a próxima (mantém cliente e veículo se quiser)
+        // Limpar form para a próxima (mantém veículo se quiser)
         reset({
             tipo_entrega: data.tipo_entrega,
             veiculoId: data.veiculoId,
-            clienteId: data.clienteId,
-            enderecoDigitado: "",
+            veiculosIds: data.veiculosIds,
+            clienteId: "",
             produtos: [{ quantidade: 1, peso_unitario: 50, descricao: "" }]
         });
-        setEnderecoQuery("");
     }
 
     function removerEntrega(id: string) {
@@ -128,11 +131,19 @@ export default function NovaEntrega() {
     }
 
     async function salvarLote() {
-        if (entregas.length === 0) return;
+        if (entregas.length === 0 || !depositoIdSelecionado) return;
         setSalvando(true);
 
         try {
-            const success = await salvarLoteAction(entregas);
+            // Coletar todos os veículos selecionados em todas as entregas do lote
+            const allVeiculosIdsSet = new Set<string>();
+            entregas.forEach(e => {
+                if (e.veiculoId) allVeiculosIdsSet.add(e.veiculoId);
+                if (e.veiculosIds) e.veiculosIds.forEach(id => allVeiculosIdsSet.add(id));
+            });
+            const allVeiculosIds = Array.from(allVeiculosIdsSet);
+
+            const success = await salvarLoteAction(entregas, allVeiculosIds, depositoIdSelecionado);
 
             if (success) {
                 alert("Entregas salvas com sucesso!");
@@ -147,6 +158,56 @@ export default function NovaEntrega() {
             setSalvando(false);
         }
     }
+
+    // Cálculos de capacidade e carga
+    const veiculosDisponiveis = veiculos.filter(v => v.disponivel);
+
+    let capacidadeTotal = 0;
+    let cargaBackend = 0;
+
+    if (watchTipoEntrega === "unica-entrega" && watchVeiculoId) {
+        const v = veiculosDisponiveis.find(v => v.veiculo_id === watchVeiculoId);
+        if (v) {
+            capacidadeTotal = v.veiculo_capacidade || 0;
+            cargaBackend = v.carga_atual || 0;
+        }
+    } else if (watchTipoEntrega === "multi-entrega" && watchVeiculosIds.length > 0) {
+        watchVeiculosIds.forEach(id => {
+            const v = veiculosDisponiveis.find(v => v.veiculo_id === id);
+            if (v) {
+                capacidadeTotal += (v.veiculo_capacidade || 0);
+                cargaBackend += (v.carga_atual || 0);
+            }
+        });
+    }
+
+    const cargaFormulario = watchProdutos?.reduce((acc, p) => acc + (Number(p.quantidade || 0) * Number(p.peso_unitario || 0)), 0) || 0;
+
+    const cargaLote = entregas.reduce((acc, entrega) => {
+        let match = false;
+        if (watchTipoEntrega === "unica-entrega" && entrega.veiculoId === watchVeiculoId) {
+            match = true;
+        } else if (watchTipoEntrega === "multi-entrega") {
+            // Conta todas as entregas do lote que estão associadas a algum dos veículos selecionados
+            if (entrega.veiculosIds?.some(id => watchVeiculosIds.includes(id))) {
+                match = true;
+            }
+        }
+        
+        if (match) {
+            return acc + entrega.produtos.reduce((pAcc, p) => pAcc + (p.quantidade * p.peso_unitario), 0);
+        }
+        return acc;
+    }, 0);
+
+    const cargaTotalAtual = cargaBackend + cargaLote + cargaFormulario;
+    let porcentagemOcupacao = 0;
+    if (capacidadeTotal > 0) {
+        porcentagemOcupacao = Math.min((cargaTotalAtual / capacidadeTotal) * 100, 100);
+    }
+    
+    const sobrecarga = capacidadeTotal > 0 && cargaTotalAtual > capacidadeTotal;
+    const mostraProgressBar = capacidadeTotal > 0;
 
     return (
         <div className="container mx-auto p-8 max-w-5xl space-y-8">
@@ -178,6 +239,53 @@ export default function NovaEntrega() {
                     <CardContent>
                         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
 
+                            <div className="flex flex-col space-y-2">
+                                <Label htmlFor="depositoId">Selecione o Depósito (Origem)</Label>
+                                <Popover open={openDeposito} onOpenChange={setOpenDeposito}>
+                                    <PopoverTrigger render={
+                                        <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            aria-expanded={openDeposito}
+                                            className={cn("justify-between", !depositoIdSelecionado && "text-muted-foreground")}
+                                        />
+                                    }>
+                                        {depositoIdSelecionado
+                                            ? depositos.find(d => d.deposito_id === depositoIdSelecionado)?.dep_nome
+                                            : "Selecione um depósito..."}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[300px] p-0">
+                                        <Command>
+                                            <CommandInput placeholder="Buscar depósito..." />
+                                            <CommandList>
+                                                <CommandEmpty>Nenhum depósito disponível.</CommandEmpty>
+                                                {depositos.map((deposito) => (
+                                                    <CommandItem
+                                                        key={deposito.deposito_id}
+                                                        value={deposito.dep_nome}
+                                                        onSelect={() => {
+                                                            setDepositoIdSelecionado(deposito.deposito_id);
+                                                            setOpenDeposito(false);
+                                                        }}
+                                                    >
+                                                        <Check
+                                                            className={cn(
+                                                                "mr-2 h-4 w-4",
+                                                                depositoIdSelecionado === deposito.deposito_id
+                                                                    ? "opacity-100"
+                                                                    : "opacity-0"
+                                                            )}
+                                                        />
+                                                        {deposito.dep_nome}
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
+
                             {watchTipoEntrega === "unica-entrega" && (
                                 <div className="flex flex-col space-y-2">
                                     <Label htmlFor="veiculoId">Selecione o veiculo</Label>
@@ -192,7 +300,7 @@ export default function NovaEntrega() {
                                             />
                                         }>
                                             {watchVeiculoId
-                                                ? veiculos.find(v => v.veiculo_id === watchVeiculoId)?.veiculo_nome
+                                                ? veiculosDisponiveis.find(v => v.veiculo_id === watchVeiculoId)?.veiculo_nome
                                                 : loadingVeiculos ? "Carregando..." : "Selecione um veiculo..."}
                                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                         </PopoverTrigger>
@@ -200,8 +308,8 @@ export default function NovaEntrega() {
                                             <Command>
                                                 <CommandInput placeholder="Buscar veiculo..." />
                                                 <CommandList>
-                                                    <CommandEmpty>Nenhum veiculo encontrado.</CommandEmpty>
-                                                    {veiculos.map((veiculo) => (
+                                                    <CommandEmpty>Nenhum veiculo disponível.</CommandEmpty>
+                                                    {veiculosDisponiveis.map((veiculo) => (
                                                         <CommandItem
                                                             key={veiculo.veiculo_id}
                                                             value={veiculo.veiculo_nome}
@@ -218,7 +326,7 @@ export default function NovaEntrega() {
                                                                         : "opacity-0"
                                                                 )}
                                                             />
-                                                            {veiculo.veiculo_nome}
+                                                            {veiculo.veiculo_nome} ({veiculo.veiculo_capacidade}kg)
                                                         </CommandItem>
                                                     ))}
                                                 </CommandList>
@@ -226,6 +334,81 @@ export default function NovaEntrega() {
                                         </PopoverContent>
                                     </Popover>
                                 </div>
+                            )}
+
+                            {watchTipoEntrega === "multi-entrega" && (
+                                <div className="flex flex-col space-y-2">
+                                    <Label htmlFor="veiculosIds">Selecione os veículos</Label>
+                                    <Popover open={openVeiculosMulti} onOpenChange={setOpenVeiculosMulti}>
+                                        <PopoverTrigger render={
+                                            <Button
+                                                variant="outline"
+                                                role="combobox"
+                                                aria-expanded={openVeiculosMulti}
+                                                className={cn("justify-between", watchVeiculosIds.length === 0 && "text-muted-foreground")}
+                                                disabled={loadingVeiculos}
+                                            />
+                                        }>
+                                            {watchVeiculosIds.length > 0
+                                                ? `${watchVeiculosIds.length} selecionado(s)`
+                                                : loadingVeiculos ? "Carregando..." : "Selecione veículos..."}
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-[300px] p-0">
+                                            <Command>
+                                                <CommandInput placeholder="Buscar veiculo..." />
+                                                <CommandList>
+                                                    <CommandEmpty>Nenhum veiculo disponível.</CommandEmpty>
+                                                    {veiculosDisponiveis.map((veiculo) => (
+                                                        <CommandItem
+                                                            key={veiculo.veiculo_id}
+                                                            value={veiculo.veiculo_nome}
+                                                            onSelect={() => {
+                                                                const current = watchVeiculosIds;
+                                                                const isSelected = current.includes(veiculo.veiculo_id);
+                                                                if (isSelected) {
+                                                                    setValue("veiculosIds", current.filter(id => id !== veiculo.veiculo_id));
+                                                                } else {
+                                                                    setValue("veiculosIds", [...current, veiculo.veiculo_id]);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Check
+                                                                className={cn(
+                                                                    "mr-2 h-4 w-4",
+                                                                    watchVeiculosIds.includes(veiculo.veiculo_id)
+                                                                        ? "opacity-100"
+                                                                        : "opacity-0"
+                                                                )}
+                                                            />
+                                                            {veiculo.veiculo_nome} ({veiculo.veiculo_capacidade}kg)
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandList>
+                                            </Command>
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
+                            )}
+
+                            {mostraProgressBar && (
+                                <div className="space-y-1.5 pt-2">
+                                    <div className="flex justify-between text-xs font-medium text-muted-foreground">
+                                        <span>Carga Calculada: {cargaTotalAtual.toFixed(2)}kg</span>
+                                        <span>Limite: {capacidadeTotal}kg</span>
+                                    </div>
+                                    <Progress value={porcentagemOcupacao} className={cn("h-2", sobrecarga && "[&>div]:bg-red-500")} />
+                                </div>
+                            )}
+
+                            {sobrecarga && (
+                                <Alert variant="destructive">
+                                    <AlertCircle className="h-4 w-4" />
+                                    <AlertTitle>Sobrecarga Detectada</AlertTitle>
+                                    <AlertDescription>
+                                        O limite de peso foi ultrapassado. Você ainda pode adicionar o item à lista; a API tentará balancear a carga automaticamente depois.
+                                    </AlertDescription>
+                                </Alert>
                             )}
 
                             {/* CLIENTE (Combobox) */}
@@ -272,6 +455,12 @@ export default function NovaEntrega() {
                                     </PopoverContent>
                                 </Popover>
                                 {errors.clienteId && <p className="text-sm font-medium text-destructive">{errors.clienteId.message}</p>}
+                                {watchClienteId && (
+                                    <div className="text-sm p-3 bg-muted/30 border rounded-md text-muted-foreground flex items-center">
+                                        <MapPin className="h-4 w-4 mr-2" />
+                                        {clientes.find(c => c.usr_id === watchClienteId)?.endereco_digitado || "Cliente não tem endereço salvo."}
+                                    </div>
+                                )}
                             </div>
 
                             {/* PRODUTOS / SACAS */}
@@ -315,47 +504,6 @@ export default function NovaEntrega() {
                                 ))}
                             </div>
 
-
-                            {/* ENDEREÇO (Autocomplete Nominatim) */}
-                            <div className="flex flex-col space-y-2 relative">
-                                <Label htmlFor="enderecoDigitado">Endereço de Destino</Label>
-                                <div className="relative">
-                                    <MapPin className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        id="enderecoDigitado"
-                                        placeholder="Digite para buscar endereço..."
-                                        className="pl-9"
-                                        value={enderecoQuery || watchEndereco || ""}
-                                        onChange={(e) => {
-                                            setEnderecoQuery(e.target.value);
-                                            setValue("enderecoDigitado", ""); // limpa o real value até selecionar
-                                        }}
-                                    />
-                                    {loadingEndereco && <Loader2 className="absolute right-2.5 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />}
-                                </div>
-
-                                {/* Dropdown de Resultados do Nominatim */}
-                                {openEndereco && enderecoResultados.length > 0 && (
-                                    <div className="absolute top-[70px] left-0 right-0 z-50 bg-popover border border-border rounded-md shadow-md max-h-[250px] overflow-auto">
-                                        {enderecoResultados.map((res, index) => (
-                                            <div
-                                                key={index}
-                                                className="p-2 hover:bg-muted cursor-pointer text-sm"
-                                                onClick={() => {
-                                                    setValue("enderecoDigitado", res.displayName);
-                                                    setValue("lat", res.lat);
-                                                    setValue("lng", res.lng);
-                                                    setEnderecoQuery(res.displayName);
-                                                    setOpenEndereco(false);
-                                                }}
-                                            >
-                                                {res.displayName}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                                {errors.enderecoDigitado && <p className="text-sm font-medium text-destructive">{errors.enderecoDigitado.message}</p>}
-                            </div>
 
                             <Button type="submit" className="w-full">
                                 <Plus className="mr-2 h-4 w-4" />
@@ -418,7 +566,7 @@ export default function NovaEntrega() {
                     <CardFooter className="pt-4 border-t">
                         <Button
                             className="w-full bg-green-600 hover:bg-green-700 text-white"
-                            disabled={entregas.length === 0 || salvando}
+                            disabled={entregas.length === 0 || salvando || !depositoIdSelecionado}
                             onClick={salvarLote}
                         >
                             {salvando ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}

@@ -3,13 +3,15 @@ import { PrismaClient } from '../src/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
 // Configura o Prisma de forma isolada para o Seed (assim como na aplicação)
-let adapter;
+let prisma: PrismaClient;
 if (process.env.DATABASE_URL) {
-    adapter = new PrismaPg({
+    const adapter = new PrismaPg({
         connectionString: process.env.DATABASE_URL
     });
+    prisma = new PrismaClient({ adapter });
+} else {
+    throw new Error("DATABASE_URL is required to run seed");
 }
-const prisma = new PrismaClient({ adapter });
 
 async function main() {
     console.log("Iniciando o seed...");

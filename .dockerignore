@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.env
+.env.*
+!.env.example
+logs
+*.log
+docker-compose.yml
+Dockerfile.*
+.vscode
+.idea
+.windsurf
+.claude
+.agents
