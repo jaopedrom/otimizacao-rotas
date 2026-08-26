@@ -45,17 +45,27 @@ model tb_deposito {
 model tb_empresa {
   empresa_id     String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   emp_nome       String        @db.VarChar(100)
+  emp_razao_soc  String        @db.VarChar(100)
+  emp_cnpj       String        @db.VarChar(14)
+  emp_email      String        @db.VarChar(100)
+  emp_telefone   String        @db.VarChar(100)
+  tb_endereco    tb_endereco   @relation(fields: [emp_end_id], references: [end_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_empresa_end")
   emp_dt_criacao DateTime      @default(now()) @db.Timestamp(6)
   tb_deposito    tb_deposito[]
   tb_entrega     tb_entrega[]
   tb_rota        tb_rota[]
   tb_usuario     tb_usuario[]
   tb_veiculo     tb_veiculo[]
+
+  @@unique([emp_cnpj, emp_email, emp_telefone])
+  @@index([emp_end_id], map: "idx_empresa_end")
 }
 
 model tb_endereco {
   end_id                                               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   end_endp_id                                          String             @db.Uuid
+  end_usr_id                                           String?            @db.Uuid
+  end_apelido                                          String?            @db.VarChar(50)
   endereco_digitado                                    String?            @db.VarChar(250)
   end_numero                                           String?            @db.VarChar(20)
   end_complemento                                      String?            @db.VarChar(255)
@@ -83,6 +93,7 @@ model tb_endereco_postal {
   tb_bairro      tb_bairro     @relation(fields: [endp_bairro_id], references: [bai_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_endp_bairro")
   tb_cidade      tb_cidade     @relation(fields: [endp_cidade_id], references: [cid_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_endp_cidade")
   tb_logradouro  tb_logradouro @relation(fields: [endp_log_id], references: [log_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_endp_logradouro")
+  tb_empresa     tb_empresa[]
 
   @@index([endp_bairro_id], map: "idx_endp_bairro")
   @@index([endp_cep], map: "idx_endp_cep")
@@ -194,26 +205,27 @@ model tb_telefone {
 }
 
 model tb_usuario {
-  usr_id                                              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  usr_emp_id                                          String       @db.Uuid
-  usr_nome                                            String       @db.VarChar(255)
-  usr_email                                           String       @unique(map: "uq_usr_email") @db.VarChar(255)
-  usr_password_hash                                   String       @db.VarChar(255)
+  usr_id                                              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usr_emp_id                                          String        @db.Uuid
+  usr_nome                                            String        @db.VarChar(255)
+  usr_email                                           String        @unique(map: "uq_usr_email") @db.VarChar(255)
+  usr_password_hash                                   String        @db.VarChar(255)
   usr_cargo                                           tipo_usr
-  usr_tel_id                                          String?      @db.Uuid
-  usr_end_id                                          String?      @db.Uuid
-  dt_criacao                                          DateTime     @default(now()) @db.Timestamp(6)
-  tb_entrega_tb_entrega_ent_criado_por_idTotb_usuario tb_entrega[] @relation("tb_entrega_ent_criado_por_idTotb_usuario")
-  tb_entrega_tb_entrega_ent_user_idTotb_usuario       tb_entrega[] @relation("tb_entrega_ent_user_idTotb_usuario")
+  usr_tel_id                                          String?       @db.Uuid
+  usr_end_id                                          String?       @db.Uuid
+  usr_dt_nascimento                                   DateTime?     @db.Date
+  dt_criacao                                          DateTime      @default(now()) @db.Timestamp(6)
+  tb_entrega_tb_entrega_ent_criado_por_idTotb_usuario tb_entrega[]  @relation("tb_entrega_ent_criado_por_idTotb_usuario")
+  tb_entrega_tb_entrega_ent_user_idTotb_usuario       tb_entrega[]  @relation("tb_entrega_ent_user_idTotb_usuario")
   tb_rota                                             tb_rota[]
-  tb_empresa                                          tb_empresa   @relation(fields: [usr_emp_id], references: [empresa_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_usr_empresa")
-  tb_telefone                                         tb_telefone? @relation(fields: [usr_tel_id], references: [tel_id], onUpdate: NoAction, map: "fk_usr_tel")
-  tb_endereco_tb_usuario_usr_end_idTotb_endereco      tb_endereco? @relation("tb_usuario_usr_end_idTotb_endereco", fields: [usr_end_id], references: [end_id], onUpdate: NoAction, map: "fk_usr_end")
+  tb_empresa                                          tb_empresa    @relation(fields: [usr_emp_id], references: [empresa_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_usr_empresa")
+  tb_telefone                                         tb_telefone?  @relation(fields: [usr_tel_id], references: [tel_id], onUpdate: NoAction, map: "fk_usr_tel")
+  tb_endereco_tb_usuario_usr_end_idTotb_endereco      tb_endereco?  @relation("tb_usuario_usr_end_idTotb_endereco", fields: [usr_end_id], references: [end_id], onUpdate: NoAction, map: "fk_usr_end")
   tb_veiculo                                          tb_veiculo[]
+  tb_endereco                                         tb_endereco[]
 
   @@index([usr_emp_id], map: "idx_usuario_empresa")
   @@index([usr_tel_id], map: "idx_usuario_tel")
-  @@index([usr_end_id], map: "idx_usuario_end")
 }
 
 model tb_veiculo {
@@ -223,7 +235,7 @@ model tb_veiculo {
   vei_motorista_id String?     @db.Uuid
   vei_nome         String      @db.VarChar(255)
   vei_placa        String?     @db.VarChar(10)
-  vei_capacidade   Int?
+  vei_capacidade   Decimal?    @db.Decimal(10, 2)
   vei_ativo        Boolean     @default(true)
   dt_criacao       DateTime    @default(now()) @db.Timestamp(6)
   tb_parada        tb_parada[]
