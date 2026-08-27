@@ -17,6 +17,7 @@ fastify.setValidatorCompiler(validatorCompiler);
 fastify.setSerializerCompiler(serializerCompiler);
 
 import cors from '@fastify/cors'
+import {authRoutes} from "@/src/server/routes/auth.route";
 fastify.register(cors, {
     origin: true // permite qualquer origem (útil para desenvolvimento local)
 });
@@ -33,6 +34,7 @@ fastify.register(entregasRoutes);
 fastify.register(rotasRoutes);
 fastify.register(veiculosRoutes);
 fastify.register(depositosRoutes);
+fastify.register(authRoutes);
 
 // Run the server!
 ; (async () => {
