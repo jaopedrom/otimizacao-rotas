@@ -43,21 +43,25 @@ model tb_deposito {
 }
 
 model tb_empresa {
-  empresa_id     String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  emp_nome       String        @db.VarChar(100)
-  emp_razao_soc  String        @db.VarChar(100)
-  emp_cnpj       String        @db.VarChar(14)
-  emp_email      String        @db.VarChar(100)
-  emp_telefone   String        @db.VarChar(100)
-  tb_endereco    tb_endereco   @relation(fields: [emp_end_id], references: [end_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_empresa_end")
-  emp_dt_criacao DateTime      @default(now()) @db.Timestamp(6)
-  tb_deposito    tb_deposito[]
-  tb_entrega     tb_entrega[]
-  tb_rota        tb_rota[]
-  tb_usuario     tb_usuario[]
-  tb_veiculo     tb_veiculo[]
+  empresa_id     String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  emp_nome       String      @db.VarChar(100)
+  emp_razao_soc  String      @db.VarChar(100)
+  emp_cnpj       String      @db.VarChar(14)
+  emp_email      String      @db.VarChar(100)
+  emp_end_id     String      @db.Uuid
+  tb_endereco    tb_endereco @relation(fields: [emp_end_id], references: [end_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_empresa_end")
+  emp_dt_criacao DateTime    @default(now()) @db.Timestamp(6)
 
-  @@unique([emp_cnpj, emp_email, emp_telefone])
+  tb_telefone               tb_telefone[]
+  tb_deposito               tb_deposito[]
+  tb_entrega                tb_entrega[]
+  tb_rota                   tb_rota[]
+  tb_usuario                tb_usuario[]
+  tb_veiculo                tb_veiculo[]
+  tbEnderecoPostal          tb_endereco_postal? @relation(fields: [tb_endereco_postalEndp_id], references: [endp_id])
+  tb_endereco_postalEndp_id String?             @db.Uuid
+
+  @@unique([emp_cnpj, emp_email])
   @@index([emp_end_id], map: "idx_empresa_end")
 }
 
@@ -77,6 +81,9 @@ model tb_endereco {
   tb_entrega_tb_entrega_ent_end_idTotb_endereco        tb_entrega[]       @relation("tb_entrega_ent_end_idTotb_endereco")
   tb_entrega_tb_entrega_ent_pickup_end_idTotb_endereco tb_entrega[]       @relation("tb_entrega_ent_pickup_end_idTotb_endereco")
   tb_usuario_tb_usuario_usr_end_idTotb_endereco        tb_usuario[]       @relation("tb_usuario_usr_end_idTotb_endereco")
+  tb_empresa                                           tb_empresa[]
+  tbUsuario                                            tb_usuario?        @relation(fields: [tb_usuarioUsr_id], references: [usr_id])
+  tb_usuarioUsr_id                                     String?            @db.Uuid
 
   @@index([end_endp_id], map: "idx_endereco_endp")
 }
@@ -198,41 +205,49 @@ model tb_rota {
 }
 
 model tb_telefone {
-  tel_id     String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tel_ddd    Int          @db.SmallInt
-  tel_numero String       @db.VarChar(20)
-  tb_usuario tb_usuario[]
+  tel_id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tel_usr_id     String?  @db.Uuid
+  tel_empresa_id String?  @db.Uuid
+  tel_ddd        Int      @db.SmallInt
+  tel_numero     String   @db.VarChar(20)
+  tel_apelido    String?  @db.VarChar(50)
+  dt_criacao     DateTime @default(now()) @db.Timestamp(6)
+
+  tb_usuario tb_usuario? @relation(fields: [tel_usr_id], references: [usr_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_tel_usuario")
+  tb_empresa tb_empresa? @relation(fields: [tel_empresa_id], references: [empresa_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_tel_empresa")
+
+  @@index([tel_usr_id], map: "idx_telefone_usuario")
+  @@index([tel_empresa_id], map: "idx_telefone_empresa")
 }
 
 model tb_usuario {
-  usr_id                                              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  usr_emp_id                                          String        @db.Uuid
-  usr_nome                                            String        @db.VarChar(255)
-  usr_email                                           String        @unique(map: "uq_usr_email") @db.VarChar(255)
-  usr_password_hash                                   String        @db.VarChar(255)
-  usr_cargo                                           tipo_usr
-  usr_tel_id                                          String?       @db.Uuid
-  usr_end_id                                          String?       @db.Uuid
-  usr_dt_nascimento                                   DateTime?     @db.Date
-  dt_criacao                                          DateTime      @default(now()) @db.Timestamp(6)
+  usr_id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usr_emp_id        String    @db.Uuid
+  usr_nome          String    @db.VarChar(255)
+  usr_email         String    @unique(map: "uq_usr_email") @db.VarChar(255)
+  usr_password_hash String    @db.VarChar(255)
+  usr_cargo         tipo_usr
+  usr_end_id        String?   @db.Uuid
+  usr_dt_nascimento DateTime? @db.Date
+  dt_criacao        DateTime  @default(now()) @db.Timestamp(6)
+
+  tb_telefone                                         tb_telefone[]
   tb_entrega_tb_entrega_ent_criado_por_idTotb_usuario tb_entrega[]  @relation("tb_entrega_ent_criado_por_idTotb_usuario")
   tb_entrega_tb_entrega_ent_user_idTotb_usuario       tb_entrega[]  @relation("tb_entrega_ent_user_idTotb_usuario")
   tb_rota                                             tb_rota[]
   tb_empresa                                          tb_empresa    @relation(fields: [usr_emp_id], references: [empresa_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_usr_empresa")
-  tb_telefone                                         tb_telefone?  @relation(fields: [usr_tel_id], references: [tel_id], onUpdate: NoAction, map: "fk_usr_tel")
   tb_endereco_tb_usuario_usr_end_idTotb_endereco      tb_endereco?  @relation("tb_usuario_usr_end_idTotb_endereco", fields: [usr_end_id], references: [end_id], onUpdate: NoAction, map: "fk_usr_end")
   tb_veiculo                                          tb_veiculo[]
   tb_endereco                                         tb_endereco[]
 
   @@index([usr_emp_id], map: "idx_usuario_empresa")
-  @@index([usr_tel_id], map: "idx_usuario_tel")
 }
 
 model tb_veiculo {
   vei_id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   vei_empresa_id   String      @db.Uuid
   vei_dep_id       String      @db.Uuid
-  vei_motorista_id String?     @db.Uuid
+  vei_motorista_id String      @db.Uuid
   vei_nome         String      @db.VarChar(255)
   vei_placa        String?     @db.VarChar(10)
   vei_capacidade   Decimal?    @db.Decimal(10, 2)
@@ -241,7 +256,7 @@ model tb_veiculo {
   tb_parada        tb_parada[]
   tb_deposito      tb_deposito @relation(fields: [vei_dep_id], references: [deposito_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_vei_deposito")
   tb_empresa       tb_empresa  @relation(fields: [vei_empresa_id], references: [empresa_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_vei_empresa")
-  tb_usuario       tb_usuario? @relation(fields: [vei_motorista_id], references: [usr_id], onUpdate: NoAction, map: "fk_vei_motorista")
+  tb_usuario       tb_usuario  @relation(fields: [vei_motorista_id], references: [usr_id], onUpdate: NoAction, map: "fk_vei_motorista")
 
   @@index([vei_dep_id], map: "idx_veiculo_deposito")
   @@index([vei_empresa_id], map: "idx_veiculo_empresa")
