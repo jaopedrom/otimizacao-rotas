@@ -222,6 +222,7 @@ model tb_telefone {
 
 model tb_usuario {
   usr_id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usr_cpf           String    @unique @map("usr_cpf") @db.VarChar(11)
   usr_emp_id        String    @db.Uuid
   usr_nome          String    @db.VarChar(255)
   usr_email         String    @unique(map: "uq_usr_email") @db.VarChar(255)
