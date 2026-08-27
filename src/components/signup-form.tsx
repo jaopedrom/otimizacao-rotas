@@ -1,10 +1,10 @@
-import {
-  Card, CardContent,
-} from "@/src/components/ui/card"
+// src/components/signup-form.tsx
+import { Card, CardContent } from "@/src/components/ui/card"
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/src/components/ui/field"
 import { Input } from "@/src/components/ui/input"
 import { Separator } from "@/src/components/ui/separator";
 import { SignupFormEndereco } from "@/src/components/endereco-form";
+import { SignupFormTelefone } from "@/src/components/telefone-form";
 import { useFormContext } from "react-hook-form";
 import { Signup } from "@/src/server/schemas/auth.schema";
 
@@ -48,9 +48,7 @@ export function SignupFormEmpresa({ ...props }: React.ComponentProps<typeof Card
             <Field>
               <FieldLabel htmlFor="emp_email">Email</FieldLabel>
               <Input id="emp_email" type="email" {...register("empresa.emp_email")} />
-              <FieldDescription>
-                Usaremos esse email para contato.
-              </FieldDescription>
+              <FieldDescription>Usaremos esse email para contato.</FieldDescription>
               {errors.empresa?.emp_email && (
                   <FieldDescription className="text-destructive">
                     {errors.empresa.emp_email.message}
@@ -58,15 +56,7 @@ export function SignupFormEmpresa({ ...props }: React.ComponentProps<typeof Card
               )}
             </Field>
 
-            <Field>
-              <FieldLabel htmlFor="emp_telefone">Telefone</FieldLabel>
-              <Input id="emp_telefone" type="tel" {...register("empresa.emp_telefone")} />
-              {errors.empresa?.emp_telefone && (
-                  <FieldDescription className="text-destructive">
-                    {errors.empresa.emp_telefone.message}
-                  </FieldDescription>
-              )}
-            </Field>
+            <SignupFormTelefone campoBase="empresa.emp_telefone" />
           </FieldGroup>
 
           <Separator className="my-4" />

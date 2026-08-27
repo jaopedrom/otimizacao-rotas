@@ -1,10 +1,12 @@
+// src/components/singup-usuario.tsx
 import { Card, CardContent } from "@/src/components/ui/card"
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/src/components/ui/field"
 import { Input } from "@/src/components/ui/input"
 import { useFormContext } from "react-hook-form";
 import { Signup } from "@/src/server/schemas/auth.schema";
-import {Separator} from "@/src/components/ui/separator";
-import {SignupFormEndereco} from "@/src/components/endereco-form";
+import { Separator } from "@/src/components/ui/separator";
+import { SignupFormEndereco } from "@/src/components/endereco-form";
+import { SignupFormTelefone } from "@/src/components/telefone-form";
 
 export function SignupFormUsuario({ ...props }: React.ComponentProps<typeof Card>) {
     const { register, formState: { errors } } = useFormContext<Signup>();
@@ -24,6 +26,16 @@ export function SignupFormUsuario({ ...props }: React.ComponentProps<typeof Card
                     </Field>
 
                     <Field>
+                        <FieldLabel htmlFor="usr_cpf">CPF</FieldLabel>
+                        <Input id="usr_cpf" type="text" {...register("usuario.usr_cpf")} />
+                        {errors.usuario?.usr_cpf && (
+                            <FieldDescription className="text-destructive">
+                                {errors.usuario.usr_cpf.message}
+                            </FieldDescription>
+                        )}
+                    </Field>
+
+                    <Field>
                         <FieldLabel htmlFor="usr_email">Email</FieldLabel>
                         <Input id="usr_email" type="email" {...register("usuario.usr_email")} />
                         {errors.usuario?.usr_email && (
@@ -32,6 +44,8 @@ export function SignupFormUsuario({ ...props }: React.ComponentProps<typeof Card
                             </FieldDescription>
                         )}
                     </Field>
+
+                    <SignupFormTelefone campoBase="usuario.usr_telefone" />
 
                     <Field>
                         <FieldLabel htmlFor="usr_dt_nascimento">Data de Nascimento</FieldLabel>

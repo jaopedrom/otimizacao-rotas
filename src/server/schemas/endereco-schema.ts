@@ -1,3 +1,4 @@
+// src/server/schemas/endereco-schema.ts
 import { z } from "zod";
 
 export const enderecoBaseSchema = z.object({
@@ -17,6 +18,12 @@ export const enderecoBaseSchema = z.object({
 export const enderecoSchema = enderecoBaseSchema.extend({
     lat: z.number({ message: "Latitude é obrigatória" }),
     lng: z.number({ message: "Longitude é obrigatória" }),
+});
+
+// usado no cadastro inicial: coordenadas ainda não vêm do geocoding nesse form
+export const enderecoComCoordenadasSchema = enderecoBaseSchema.extend({
+    lat: z.number().optional(),
+    lng: z.number().optional(),
 });
 
 export type EnderecoBaseInput = z.input<typeof enderecoBaseSchema>;

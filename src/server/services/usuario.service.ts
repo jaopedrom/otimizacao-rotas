@@ -3,7 +3,7 @@ import { prisma } from "@/src/lib/prisma";
 import { CreateUsuarioType } from "@/src/server/schemas/usuario.schema";
 import { criarEnderecoService } from "@/src/server/services/endereco.service";
 import { criarTelefoneService } from "@/src/server/services/telefone.service";
-import bcrypt from "bcrypt";
+import { hashPassword } from "@/src/server/services/hash.service";
 
 type CriarUsuarioServiceData = CreateUsuarioType & {
     empresa_id: string;
@@ -23,7 +23,7 @@ export async function criarUsuario(
     }
 
     //2 hash de senha
-    const senhaHash = await bcrypt.hash(data.senha, 10);
+    const senhaHash = await hashPassword(data.senha);
 
     const execute = async (trx: Prisma.TransactionClient) => {
         // cria endereco

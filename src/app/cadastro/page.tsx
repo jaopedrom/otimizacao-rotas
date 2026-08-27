@@ -1,3 +1,4 @@
+// src/app/cadastro/page.tsx
 "use client";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,7 +18,8 @@ export default function CadastroPage() {
                 endereco: { cep: "", logradouro: "", bairro: "", cidade: "", estado: "", numero: "", complemento: "" },
             },
             usuario: {
-                usr_nome: "", usr_email: "", usr_password: "", usr_password_confirm: "", usr_dt_nascimento: "",
+                usr_nome: "", usr_cpf: "", usr_email: "", usr_telefone: "",
+                usr_password: "", usr_password_confirm: "", usr_dt_nascimento: "",
                 endereco: { cep: "", logradouro: "", bairro: "", cidade: "", estado: "", numero: "", complemento: "", apelido: "" },
             },
         },
