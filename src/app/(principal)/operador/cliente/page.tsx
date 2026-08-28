@@ -8,7 +8,7 @@ import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
 import { Loader2, Save, Search, MapPin } from "lucide-react";
-import { createClienteSchema, CreateClienteType } from "@/src/server/schemas/clientes.schema";
+import { createUsuarioSchema, CreateUsuarioType } from "@/src/server/schemas/usuario.schema";
 import { criarClienteAction, searchEnderecoAction } from "./actions";
 
 export default function ClientePage() {
@@ -16,8 +16,8 @@ export default function ClientePage() {
     const [buscandoCep, setBuscandoCep] = useState(false);
     const [buscandoGeo, setBuscandoGeo] = useState(false);
 
-    const { register, handleSubmit, setValue, watch, formState: { errors }, reset } = useForm<CreateClienteType>({
-        resolver: zodResolver(createClienteSchema),
+    const { register, handleSubmit, setValue, watch, formState: { errors }, reset } = useForm<CreateUsuarioType>({
+        resolver: zodResolver(createUsuarioSchema),
         defaultValues: {
             nome: "",
             email: "",
@@ -91,7 +91,7 @@ export default function ClientePage() {
         }
     }
 
-    async function onSubmit(data: CreateClienteType) {
+    async function onSubmit(data: CreateUsuarioType) {
         if (!data.lat || !data.lng) {
             alert("Não foi possível obter a Latitude/Longitude. Verifique o endereço e número.");
             return;

@@ -78,7 +78,7 @@ export default function NovaEntrega() {
             })
             .catch(err => console.error("Erro ao carregar clientes", err))
             .finally(() => setLoadingClientes(false));
-            
+
         getDepositosAction()
             .then(data => {
                 if (Array.isArray(data)) setDepositos(data);
@@ -88,7 +88,7 @@ export default function NovaEntrega() {
 
     function onSubmit(data: FormValues) {
         const clienteSelecionado = clientes.find(c => c.usr_id === data.clienteId);
-        
+
         let veiculoNome;
         if (data.tipo_entrega === "unica-entrega") {
             veiculoNome = veiculos.find(v => v.veiculo_id === data.veiculoId)?.veiculo_nome;
@@ -193,7 +193,7 @@ export default function NovaEntrega() {
                 match = true;
             }
         }
-        
+
         if (match) {
             return acc + entrega.produtos.reduce((pAcc, p) => pAcc + (p.quantidade * p.peso_unitario), 0);
         }
@@ -205,7 +205,7 @@ export default function NovaEntrega() {
     if (capacidadeTotal > 0) {
         porcentagemOcupacao = Math.min((cargaTotalAtual / capacidadeTotal) * 100, 100);
     }
-    
+
     const sobrecarga = capacidadeTotal > 0 && cargaTotalAtual > capacidadeTotal;
     const mostraProgressBar = capacidadeTotal > 0;
 
@@ -228,7 +228,7 @@ export default function NovaEntrega() {
                         <br />
                         <RadioButton
                             options={[
-                                { value: "multi-entrega", label: "Multi-Entrega" },
+                                { value: "multi-entrega", label: "Multi-veiculo" },
                                 { value: "unica-entrega", label: "Única Entrega" },
                             ]}
                             value={watchTipoEntrega}

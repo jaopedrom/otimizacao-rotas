@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AddressAutocomplete, GeocodeCandidate } from "../components/AddressAutocomplete";
+import { AddressAutocomplete, GeocodeCandidate } from "../../components/AddressAutocomplete";
 
 
 export default function Home() {

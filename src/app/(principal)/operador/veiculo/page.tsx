@@ -9,7 +9,7 @@ import { Label } from "@/src/components/ui/label";
 import { Loader2, Save } from "lucide-react";
 import { createVeiculo, createVeiculoSchema, createVeiculoInput } from "@/src/server/schemas/veiculos.schema";
 import { SwitchDemo } from "@/src/components/ui/switch-button";
-import { criarVeiculosAction } from "@/src/app/operador/veiculo/actions";
+import { criarVeiculosAction } from "@/src/app/(principal)/operador/veiculo/actions";
 
 export default function CadastroVeiculoPage() {
     const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting }, reset } =
