@@ -24,6 +24,7 @@ import Link from "next/link"
 import React, { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import { ChevronRight, Truck, PlusCircle, PackageCheck, Calendar, Building, UserPlus, Layers, LayersPlusIcon } from "lucide-react"
+import {NavUser} from "@/src/components/nav-user";
 
 const entregaItems = [
   { title: "Nova Entrega", url: "/operador/entrega/nova-entrega", icon: PlusCircle },
@@ -40,6 +41,13 @@ const cadastroItems = [
 ]
 
 export function AppSidebar() {
+
+  const usuarioSimulado = {
+    name: "João Silva",
+    email: "joao@empresa.com",
+    avatar: "https://github.com/shadcn.png", // Link de uma imagem ou string vazia ""
+  };
+
   const pathname = usePathname()
 
   // states independentes: um para o grupo Entregas, outro para Cadastros
@@ -151,7 +159,9 @@ export function AppSidebar() {
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter />
+      <SidebarFooter>
+        <NavUser user={usuarioSimulado} />
+      </SidebarFooter>
     </Sidebar>
   )
 }
