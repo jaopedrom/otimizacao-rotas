@@ -7,6 +7,9 @@ import { entregasRoutes } from "./routes/entregas.routes";
 import { rotasRoutes } from "./routes/rotas.route";
 import { veiculosRoutes } from "./routes/veiculos.routes";
 import { depositosRoutes } from "./routes/depositos.routes";
+import jwt from '@fastify/jwt'
+import cookie from '@fastify/cookie'
+import { loginRoutes } from "@/src/server/routes/login.route";
 
 const fastify = Fastify({
     logger: true
@@ -19,10 +22,21 @@ fastify.setSerializerCompiler(serializerCompiler);
 import cors from '@fastify/cors'
 import {authRoutes} from "@/src/server/routes/auth.route";
 import {empresaRoutes} from "@/src/server/routes/empresa.route";
+import authPlugin from "@/src/server/plugins/auth.plugin";
+import {meRoutes} from "@/src/server/routes/me.routes";
 
 fastify.register(cors, {
     origin: true // permite qualquer origem (útil para desenvolvimento local)
 });
+fastify.register(cookie);
+fastify.register(jwt, {
+    secret: process.env.JWT_SECRET!,
+    cookie: {
+        cookieName: "session_token",
+        signed: false,
+    },
+});
+fastify.register(authPlugin);
 
 // Declare a route
 fastify.get('/', async function handler(request, reply) {
@@ -38,6 +52,8 @@ fastify.register(veiculosRoutes);
 fastify.register(depositosRoutes);
 fastify.register(authRoutes);
 fastify.register(empresaRoutes);
+fastify.register(loginRoutes);
+fastify.register(meRoutes);
 
 // Run the server!
 ; (async () => {
